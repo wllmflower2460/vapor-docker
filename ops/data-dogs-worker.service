@@ -1,0 +1,13 @@
+[Unit]
+Description=Data Dogs Hailo Worker
+After=network-online.target
+
+[Service]
+User=pi
+Environment=HEF_PATH=/opt/hailo/models/sample.hef
+ExecStart=/usr/bin/python3 /opt/hailo/worker.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -18,3 +18,30 @@
         <img src="http://img.shields.io/badge/swift-5.1-brightgreen.svg" alt="Swift 5.1">
     </a>
 </p>
+
+# Data Dogs – Vapor API (Pi) + Hailo Worker (optional)
+
+Vapor 4 API running on a Raspberry Pi. Accepts video + IMU uploads from an iOS app, stores them under a bind-mounted sessions dir, and (optionally) kicks off a Hailo-8 worker that writes `results.json` per session.
+
+## TL;DR
+
+```bash
+# Build
+docker build -t vapor-app:clean .
+
+# Run (read endpoints protected by API key)
+docker rm -f vapor-app 2>/dev/null || true
+docker run -d --name vapor-app \
+  --user 1000:1000 \
+  -p 8080:8080 \
+  -e SESSIONS_DIR=/var/app/sessions \
+  -e API_KEY="supersecret123" \
+  -v /home/pi/appdata/sessions:/var/app/sessions \
+  vapor-app:clean
+
+# Health check (open)
+curl -sSf http://localhost:8080/healthz
+
+# List sessions (requires header)
+HDR='X-API-Key: supersecret123'
+curl -sSf -H "$HDR" http://localhost:8080/sessions | jq
