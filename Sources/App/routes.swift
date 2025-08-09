@@ -58,7 +58,22 @@ public func routes(_ app: Application) throws {
         }
         return SessionSummary(id: id, files: out)
     }
-
+    app.get("admin","retention","candidates") { _ async throws -> [String] in
+    let base = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions""
+    let fm = FileManager.default
+    let items = (try? fm.contentsOfDirectory(atPath: base)) ?? []
+    let cutoff = Date().addingTimeInterval(-7*24*3600)
+    return items.compactMap { name in
+        var isDir: ObjCBool = false
+        let p = (base as NSString).appendingPathComponent(name)
+        guard fm.fileExists(atPath: p, isDirectory: &isDir), isDir.boolValue,
+              let attrs = try? fm.attributesOfItem(atPath: p),
+              let mtime = attrs[.modificationDate] as? Date,
+              mtime < cutoff
+        else { return nil }
+        return name
+    }
+}
     // Stream results.json (public)
     app.get("sessions", ":id", "results") { req async throws -> Response in
         let base = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"

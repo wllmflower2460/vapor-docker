@@ -45,3 +45,48 @@ curl -sSf http://localhost:8080/healthz
 # List sessions (requires header)
 HDR='X-API-Key: supersecret123'
 curl -sSf -H "$HDR" http://localhost:8080/sessions | jq
+
+### Config
+Copy `Resources/ServerConfig.example.plist` → `ServerConfig.plist` and set:
+- BaseURL: http://<pi-ip>:8080
+- APIKey:  <value>
+
+(Optional) Use Debug tab to override at runtime via UserDefaults.
+
+### Notes
+- If BaseURL is http://, Info.plist includes ATS local-network exception.
+- For stable demos, prefer Pi IP over mDNS hostnames.
+
+Session Retention
+Purpose: Automatically purge old training session folders to free space and keep the server tidy.
+
+Path: /home/pi/appdata/sessions
+
+Retention Window:
+Session directories older than 7 days are deleted.
+
+Automation:
+Managed by clean-sessions.service (oneshot) + clean-sessions.timer (daily).
+Timer runs every day at 03:30 local time.
+
+Manual Run:
+sudo systemctl start clean-sessions.service
+
+Force a Test Deletion:
+BASE=/home/pi/appdata/sessions
+mkdir -p "$BASE/OLD_TEST"
+sudo touch -d "8 days ago" "$BASE/OLD_TEST"
+sudo systemctl start clean-sessions.service
+
+Check Logs:
+journalctl -u clean-sessions.service -n 50 --no-pager
+
+Check Timer Status:
+systemctl list-timers | grep clean-sessions
+
+Script Location:
+/usr/local/bin/clean-sessions.sh
+
+Unit Files:
+/etc/systemd/system/clean-sessions.service
+/etc/systemd/system/clean-sessions.timer
