@@ -4,3 +4,19 @@ Package.resolved
 .DS_Store
 *.log
 app.db
+# SwiftPM & build
+.build/
+.swiftpm/
+Package.resolved
+
+# Misc
+.DS_Store
+*.log
+
+# Data artifacts
+db.sqlite
+imu.json
+sample.mp4
+
+# Nested repos
+DataDogsServer/h8-examples/
