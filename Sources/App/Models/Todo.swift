@@ -1,27 +1,34 @@
-import FluentSQLite
+import Fluent
 import Vapor
 
-/// A single entry of a Todo list.
-final class Todo: SQLiteModel {
-    typealias Database = SQLiteDatabase
-    /// The unique identifier for this `Todo`.
-    var id: Int?
+/// Represents a single entry in a Todo list for Vapor 4
+final class Todo: Model, Content {
+    // MARK: - Schema name for the table
+    static let schema = "todos"
 
-    /// A title describing what this `Todo` entails.
+    // MARK: - Fields
+    @ID(key: .id)
+    var id: UUID?
+
+    @Field(key: "title")
     var title: String
 
-    /// Creates a new `Todo`.
-    init(id: Int? = nil, title: String) {
+    @Field(key: "completed")
+    var completed: Bool
+
+    // MARK: - Initializers
+
+    /// Creates an empty Todo (required by Fluent)
+    init() { }
+
+    /// Creates a new Todo
+    init(id: UUID? = nil, title: String, completed: Bool = false) {
         self.id = id
         self.title = title
+        self.completed = completed
     }
 }
 
-/// Allows `Todo` to be used as a dynamic migration.
-extension Todo: Migration { }
+// Uncomment if you want to use Todo directly as a route parameter:
+// extension Todo: Parameter {}
 
-/// Allows `Todo` to be encoded to and decoded from HTTP messages.
-extension Todo: Content { }
-
-/// Allows `Todo` to be used as a dynamic parameter in route definitions.
-extension Todo: Parameter { }

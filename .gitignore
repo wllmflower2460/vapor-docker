@@ -1,8 +1,6 @@
-Packages
-.build
-xcuserdata
-*.xcodeproj
-DerivedData/
+.build/
+.swiftpm/
+Package.resolved
 .DS_Store
-.swiftpm
-db.sqlite
+*.log
+app.db

@@ -1,6 +1,5 @@
-.git
-.build
-DerivedData
-Package.resolved
+.build/
+.swiftpm/
+.package/
 *.xcodeproj
-
+.DS_Store
