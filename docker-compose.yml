@@ -1,0 +1,28 @@
+services:
+  api:
+    image: vapor-app:latest
+    container_name: vapor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /home/pi/appdata/sessions:/var/app/sessions
+    environment:
+      # Optional, but nice to be explicit
+      LOG_LEVEL: info
+      SESSIONS_DIR: /var/app/sessions
+      # API_KEY: "k1,k2"   # uncomment if you want the upload route protected
+    restart: unless-stopped
+    healthcheck:
+      # Checks *inside* the container on the container port
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    # Optional: keep logs from growing forever
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

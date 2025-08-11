@@ -23,12 +23,16 @@ struct SessionSummary: Content {
 
 public func routes(_ app: Application) throws {
 
+    // Root endpoint (public)
+    app.get { _ in ["ok": true] }
+    
     // Health probe (public)
-    app.get("healthz") { _ in "ok" }
+    app.get("healthz") { _ in ["ok": true] }
 
     // List all session IDs (public)
     app.get("sessions") { req async throws -> [String] in
         let base = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"
+
         let fm = FileManager.default
         let items = (try? fm.contentsOfDirectory(atPath: base)) ?? []
         var ids: [String] = []
@@ -59,21 +63,21 @@ public func routes(_ app: Application) throws {
         return SessionSummary(id: id, files: out)
     }
     app.get("admin","retention","candidates") { _ async throws -> [String] in
-    let base = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions""
-    let fm = FileManager.default
-    let items = (try? fm.contentsOfDirectory(atPath: base)) ?? []
-    let cutoff = Date().addingTimeInterval(-7*24*3600)
-    return items.compactMap { name in
-        var isDir: ObjCBool = false
-        let p = (base as NSString).appendingPathComponent(name)
-        guard fm.fileExists(atPath: p, isDirectory: &isDir), isDir.boolValue,
-              let attrs = try? fm.attributesOfItem(atPath: p),
-              let mtime = attrs[.modificationDate] as? Date,
-              mtime < cutoff
-        else { return nil }
-        return name
+        let base = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"
+        let fm = FileManager.default
+        let items = (try? fm.contentsOfDirectory(atPath: base)) ?? []
+        let cutoff = Date().addingTimeInterval(-7*24*3600)
+        return items.compactMap { name in
+            var isDir: ObjCBool = false
+            let p = (base as NSString).appendingPathComponent(name)
+            guard fm.fileExists(atPath: p, isDirectory: &isDir), isDir.boolValue,
+                  let attrs = try? fm.attributesOfItem(atPath: p),
+                  let mtime = attrs[.modificationDate] as? Date,
+                  mtime < cutoff
+            else { return nil }
+            return name
+        }
     }
-}
     // Stream results.json (public)
     app.get("sessions", ":id", "results") { req async throws -> Response in
         let base = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"
@@ -83,7 +87,7 @@ public func routes(_ app: Application) throws {
             .appendingPathComponent("results.json")
         
         guard FileManager.default.fileExists(atPath: p.path) else {
-            var res = Response(status: .accepted)
+            let res = Response(status: .accepted)
             res.headers.add(name: .contentType, value: "application/json")
             res.headers.add(name: "Retry-After", value: "2")
             res.body = .init(string: #"{"status": "processing"}"#)
@@ -91,23 +95,23 @@ public func routes(_ app: Application) throws {
         }
 
         let data = try Data(contentsOf: p)
-        var res = Response(status: .ok)
+        let res = Response(status: .ok)
         res.headers.contentType = .json
         res.body = .init(data: data)
         return res
     }
 
     // Multipart upload (protected by API key)
-    let protected = app.grouped(APIKeyMiddleware())
+    let protected = app.grouped(APIKeyMiddleware(app.environment))
     protected.on(.POST, "sessions", "upload", body: .collect(maxSize: "2gb")) { req async throws -> UploadAck in
         let payload = try req.content.decode(UploadPayload.self)
 
         let base = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"
-        try FileManager.default.createDirectory(atPath: base, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(atPath: base, withIntermediateDirectories: true, attributes: nil)
 
         let sid = UUID().uuidString
         let sdir = URL(fileURLWithPath: base).appendingPathComponent(sid, isDirectory: true)
-        try FileManager.default.createDirectory(at: sdir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: sdir, withIntermediateDirectories: true, attributes: nil)
 
         try await req.fileio.writeFile(payload.video.data,
                                        at: sdir.appendingPathComponent("video.mp4").path)
