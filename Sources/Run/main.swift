@@ -5,13 +5,15 @@ import Vapor
 var env = try Environment.detect()
 // Bootstrap logging from that environment
 try LoggingSystem.bootstrap(from: &env)
+// Load environment variables
+try Environment.load(.detect())
 // Create the Application
-let app = Application(env)
-defer { app.shutdown() }
+let app = try await Application.make(env)
+defer { await app.shutdown() }
 
 // Configure your application (configure.swift)
-try configure(app)
+try await configure(app)
 
 // Run the server
-try app.run()
+try await app.run()
 

@@ -14,6 +14,17 @@ public func configure(_ app: Application) throws {
     app.http.server.configuration.hostname = "0.0.0.0"
     app.http.server.configuration.port = 8080
 
+    // --- Boot diagnostics debug ---
+    let keys = (Environment.get("API_KEY") ?? "")
+        .split(separator: ",")
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .filter { !$0.isEmpty }
+    app.logger.info("API_KEY configured: \(keys.count) key(s)")
+
+    let sessionsDir = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"
+    app.logger.info("SESSIONS_DIR=\(sessionsDir)")
+    // ------------------------------------
+
     // Middleware
     app.middleware.use(TimingMiddleware())
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))

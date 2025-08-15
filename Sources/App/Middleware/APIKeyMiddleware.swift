@@ -1,37 +1,47 @@
-// APIKeyMiddleware.swift
-// created by  Will on 8/9/25
+// Middleware/APIKeyMiddleware.swift
+// created by Will on 8/9/25 (patched)
 
 import Vapor
 
-/// Checks `X-API-Key` header against env `API_KEY`.
-/// - Supports multiple keys if `API_KEY="k1,k2,k3"`.
-/// - If `API_KEY` is unset/empty, middleware is a no-op (allows all) — handy for dev.
+/// Checks API key against env `API_KEY`.
+/// - Multiple keys supported via CSV: API_KEY="k1,k2,k3"
+/// - If API_KEY is unset/empty, middleware is a no-op (allows all) — handy for dev.
 struct APIKeyMiddleware: AsyncMiddleware {
-    private let keys: Set<String>
+    private let allowed: Set<String>
 
-    // Primary init: no throwing default
     init(_ env: Environment = .production) {
         let raw = Environment.get("API_KEY") ?? ""
-        self.keys = Set(
-            raw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        self.allowed = Set(
+            raw.split(separator: ",")
+               .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+               .filter { !$0.isEmpty }
         )
     }
 
-    // Optional: convenience throwing init for callers that want detect()
-    init(detecting env: Environment) {
-        self.init(env)
-    }
-
-    // If you really want an auto-detecting initializer:
-    static func detected() throws -> APIKeyMiddleware {
-        try APIKeyMiddleware(Environment.detect())
-    }
-
     func respond(to req: Request, chainingTo next: AsyncResponder) async throws -> Response {
-        let header = req.headers.first(name: "X-API-Key") ?? ""
-        guard keys.contains(header), !keys.isEmpty else {
+        // Dev mode: no keys configured → allow all
+        if allowed.isEmpty {
+            req.logger.debug("APIKeyMiddleware: no API_KEY configured; allowing request")
+            return try await next.respond(to: req)
+        }
+
+        // Prefer X-API-Key; also accept Authorization: Bearer <key>
+        let headerKey = req.headers.first(name: "X-API-Key")?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let bearerKey = req.headers.bearerAuthorization?.token
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let key = (headerKey?.isEmpty == false ? headerKey : nil)
+                       ?? (bearerKey?.isEmpty == false ? bearerKey : nil) else {
+            req.logger.warning("401 unauthorized: missing API key header")
             throw Abort(.unauthorized)
         }
+
+        guard allowed.contains(key) else {
+            req.logger.warning("401 unauthorized: invalid API key (last4=\(key.suffix(4)))")
+            throw Abort(.unauthorized)
+        }
+
         return try await next.respond(to: req)
     }
 }
