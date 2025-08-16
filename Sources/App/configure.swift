@@ -14,26 +14,26 @@ public func configure(_ app: Application) throws {
     app.http.server.configuration.hostname = "0.0.0.0"
     app.http.server.configuration.port = 8080
 
-    // --- Boot diagnostics debug ---
-    let keys = (Environment.get("API_KEY") ?? "")
+    // Set log level early
+    app.logger.logLevel = .info
+
+    // Boot diagnostics
+    let apiKeys = (Environment.get("API_KEY") ?? "")
         .split(separator: ",")
         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         .filter { !$0.isEmpty }
-    app.logger.info("API_KEY configured: \(keys.count) key(s)")
+    app.logger.info("API_KEY configured: \(apiKeys.count) key(s)")
 
     let sessionsDir = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"
     app.logger.info("SESSIONS_DIR=\(sessionsDir)")
-    // ------------------------------------
 
     // Middleware
     app.middleware.use(TimingMiddleware())
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
     app.middleware.use(ErrorMiddleware.default(environment: app.environment))
-    app.logger.logLevel = .info // Set log level to info
     app.middleware.use(AccessLogMiddleware()) // Log each request
 
-    // SQLite lives in the bind-mounted sessions dir
-    let sessionsDir = Environment.get("SESSIONS_DIR") ?? "/var/app/sessions"
+    // SQLite setup - ensure sessions directory exists
     try FileManager.default.createDirectory(atPath: sessionsDir, withIntermediateDirectories: true, attributes: nil)
 
     let dbPath = sessionsDir + "/app.db"

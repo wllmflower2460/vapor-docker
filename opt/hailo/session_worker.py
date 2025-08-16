@@ -28,7 +28,7 @@ import re
 import sys
 
 # Path where session directories live
-SESSIONS = pathlib.Path("/home/pi/appdata/sessions")
+SESSIONS = pathlib.Path(os.environ.get("SESSIONS_DIR", "/home/pi/appdata/sessions"))
 
 # Optional override from environment
 HEF_ENV = os.environ.get("HEF_PATH")
@@ -45,10 +45,15 @@ def find_hef():
     if HEF_ENV and pathlib.Path(HEF_ENV).exists():
         return HEF_ENV
 
-    candidates = [
-        "/opt/hailo/models/sample.hef",
-        "/usr/local/hailo/resources/models/hailo8/yolov5m_seg.hef",
-    ]
+  candidates = [
+      "/usr/local/hailo/resources/models/hailo8/yolov8s.hef",      # YOLOv8 
+  small
+      "/usr/local/hailo/resources/models/hailo8/yolov5m_seg.hef",  # YOLOv5 
+  medium seg
+      "/usr/local/hailo/resources/models/hailo8/yolov11s.hef",     # YOLOv11 
+  small
+      "/opt/hailo/models/sample.hef",                              # Fallback
+  ]
     for c in candidates:
         if pathlib.Path(c).exists():
             return c
